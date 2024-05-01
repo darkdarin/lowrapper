@@ -10,19 +10,17 @@ For example: html -> docx, html -> pdf, docx -> html and many more.
 ## Usage
 
 ```php
-use Mnvx\Lowrapper\Converter;
-use Mnvx\Lowrapper\LowrapperParameters;
-use Mnvx\Lowrapper\Format;
+use DarkDarin\Lowrapper\Converter;
+use DarkDarin\Lowrapper\LowrapperParameters;
+use DarkDarin\Lowrapper\Format\TextFormatEnum;
 
 // Create converter
 $converter = new Converter();
 
 // Describe parameters for converter
-$parameters = (new LowrapperParameters())
+$parameters = (new LowrapperParameters(TextFormatEnum::DOCX))
     // HTML document
     ->setInputFile('test.html')
-    // Format of result document is docx
-    ->setOutputFormat(Format::TEXT_DOCX)
     // Result file name
     ->setOutputFile('path-to-result-docx.docx');
 
