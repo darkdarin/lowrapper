@@ -1,9 +1,12 @@
 <?php
 
-use Mnvx\Lowrapper\Converter;
-use Mnvx\Lowrapper\DocumentType;
-use Mnvx\Lowrapper\Format;
-use Mnvx\Lowrapper\LowrapperParameters;
+declare(strict_types=1);
+
+use DarkDarin\Lowrapper\Converter;
+use DarkDarin\Lowrapper\DocumentTypeEnum;
+use DarkDarin\Lowrapper\Format\TextFormatEnum;
+use DarkDarin\Lowrapper\Format\WebFormatEnum;
+use DarkDarin\Lowrapper\LowrapperParameters;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Process\Process;
 
@@ -12,7 +15,7 @@ class ConverterTest extends TestCase
     /**
      * @dataProvider converterProvider
      */
-    public function testConvert(LowrapperParameters $parameters, /*string*/ $command, /*string*/ $binary = null)
+    public function testConvert(LowrapperParameters $parameters, string $command, ?string $binary = null)
     {
         $processStub = $this->getMockBuilder(Process::class)
             ->disableOriginalConstructor()
@@ -23,14 +26,15 @@ class ConverterTest extends TestCase
         if ($binary) {
             $mockBuilder->setConstructorArgs([$binary]);
         }
-        $converterStub = $mockBuilder->setMethods([
-                'createProcess',
-                'createTemporaryFile',
-                'createOutput',
-                'deleteInput',
-                'genTemporaryFileName',
-                'getInputFile',
-            ])
+
+        $converterStub = $mockBuilder->onlyMethods([
+            'createProcess',
+            'createTemporaryFile',
+            'createOutput',
+            'deleteInput',
+            'genTemporaryFileName',
+            'getInputFile',
+        ])
             ->getMock();
 
         $converterStub->expects($this->once())
@@ -44,7 +48,7 @@ class ConverterTest extends TestCase
 
         $converterStub->expects($this->once())
             ->method('createOutput')
-            ->with($this->equalTo('some_temp_file.' . $parameters->getOutputFormat()));
+            ->with($this->equalTo('some_temp_file.' . $parameters->getOutputFormat()->getFormat()));
 
         $converterStub
             ->method('genTemporaryFileName')
@@ -57,77 +61,69 @@ class ConverterTest extends TestCase
         $converterStub->convert($parameters);
     }
 
-    public function converterProvider()
+    public static function converterProvider(): array
     {
         $command = 'libreoffice --headless --invisible --nocrashreport --nodefault --nofirststartwizard --nologo --norestore ';
         return [
             'From HTML file to HTML stdout' => [
-                (new LowrapperParameters())
-                    ->setDocumentType(DocumentType::WEB)
-                    ->setOutputFormat(Format::WEB_HTML)
+                (new LowrapperParameters(WebFormatEnum::HTML))
+                    ->setDocumentType(DocumentTypeEnum::WEB)
                     ->setInputFile('test.html')
                     ->setOutputFile('test.docx'),
-                $command .'--web --convert-to "html" "some_temp_file"',
+                $command . '--web --convert-to "html" "some_temp_file"',
                 null,
             ],
             'From HTML file to docx file' => [
-                (new LowrapperParameters())
+                (new LowrapperParameters(TextFormatEnum::DOCX))
                     ->setInputFile('test.html')
-                    ->setDocumentType(DocumentType::WRITER)
-                    ->setOutputFormat(Format::TEXT_DOCX)
+                    ->setDocumentType(DocumentTypeEnum::WRITER)
                     ->setOutputFile('test.docx'),
-                $command .'--writer --convert-to "docx" "some_temp_file"',
+                $command . '--writer --convert-to "docx" "some_temp_file"',
                 null,
             ],
             'Default document type' => [
-                (new LowrapperParameters())
+                (new LowrapperParameters(TextFormatEnum::DOCX))
                     ->setInputFile('test.html')
-                    ->setOutputFormat(Format::TEXT_DOCX)
                     ->setOutputFile('test.docx'),
-                $command .'--writer --convert-to "docx" "some_temp_file"',
+                $command . '--writer --convert-to "docx" "some_temp_file"',
                 null,
             ],
             'Output filter' => [
-                (new LowrapperParameters())
+                (new LowrapperParameters(TextFormatEnum::TEXT))
                     ->setInputFile('test.html')
-                    ->setOutputFormat(Format::TEXT_TEXT)
                     ->setOutputFile('test.text')
                     ->addOutputFilter('some filter'),
-                $command .'--web --convert-to "text:some filter" "some_temp_file"',
+                $command . '--writer --convert-to "text:some filter" "some_temp_file"',
                 null,
             ],
             'Input filter' => [
-                (new LowrapperParameters())
+                (new LowrapperParameters(TextFormatEnum::TEXT))
                     ->setInputFile('test.html')
-                    ->setOutputFormat(Format::TEXT_TEXT)
                     ->setOutputFile('test.text')
                     ->setInputFilter('some'),
-                $command .'--web --infilter=some --convert-to "text:Text (encoded):UTF8" "some_temp_file"',
+                $command . '--writer --infilter=some --convert-to "text:Text (encoded):UTF8" "some_temp_file"',
                 null,
             ],
             'Default text filter' => [
-                (new LowrapperParameters())
+                (new LowrapperParameters(TextFormatEnum::TEXT))
                     ->setInputFile('test.html')
-                    ->setOutputFormat(Format::TEXT_TEXT)
                     ->setOutputFile('test.text'),
-                $command .'--web --convert-to "text:Text (encoded):UTF8" "some_temp_file"',
+                $command . '--writer --convert-to "text:Text (encoded):UTF8" "some_temp_file"',
                 null,
             ],
             'Input string' => [
-                (new LowrapperParameters())
+                (new LowrapperParameters(TextFormatEnum::TEXT))
                     ->setInputData('example html content')
-                    ->setOutputFormat(Format::TEXT_TEXT)
                     ->setOutputFile('test.text'),
-                $command .'--web --convert-to "text:Text (encoded):UTF8" "some_temp_file"',
+                $command . '--writer --convert-to "text:Text (encoded):UTF8" "some_temp_file"',
                 null,
             ],
             'Binary' => [
-                (new LowrapperParameters())
+                (new LowrapperParameters(TextFormatEnum::DOCX))
                     ->setInputFile('test.html')
-                    ->setDocumentType(DocumentType::WRITER)
-                    ->setOutputFormat(Format::TEXT_DOCX)
+                    ->setDocumentType(DocumentTypeEnum::WRITER)
                     ->setOutputFile('test.docx'),
-                str_replace('libreoffice', '/test/path', $command) .'--writer --convert-to "docx" "some_temp_file"',
+                str_replace('libreoffice', '/test/path', $command) . '--writer --convert-to "docx" "some_temp_file"',
                 '/test/path',
             ],
         ];

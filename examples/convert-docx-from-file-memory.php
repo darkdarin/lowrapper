@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require __DIR__ . '/../vendor/autoload.php';
 
 ini_set('display_errors', 1);
@@ -11,16 +13,15 @@ require __DIR__ . '/Logger.php';
 
 // Example start
 
-use Mnvx\Lowrapper\Converter;
-use Mnvx\Lowrapper\LowrapperParameters;
-use Mnvx\Lowrapper\Format;
+use DarkDarin\Lowrapper\Converter;
+use DarkDarin\Lowrapper\Format\WebFormatEnum;
+use DarkDarin\Lowrapper\LowrapperParameters;
 
 $converter = new Converter();
 $converter->setLogger(new Logger());
 
-$parameters = (new LowrapperParameters())
-    ->setInputFile(__DIR__ . '/data/docx.docx')
-    ->setOutputFormat(Format::WEB_HTML);
+$parameters = (new LowrapperParameters(WebFormatEnum::HTML))
+    ->setInputFile(__DIR__ . '/data/docx.docx');
 
 $result = $converter->convert($parameters);
 

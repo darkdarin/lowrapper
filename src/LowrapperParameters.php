@@ -1,22 +1,25 @@
 <?php
 
-namespace Mnvx\Lowrapper;
+declare(strict_types=1);
 
+namespace DarkDarin\Lowrapper;
+
+use DarkDarin\Lowrapper\Format\FormatInterface;
+
+/**
+ * @api
+ */
 class LowrapperParameters
 {
-
     /**
      * Full path to output file. In case when output is stdout - null.
-     * @var null|string
      */
-    protected $outputFile = null;
+    protected ?string $outputFile = null;
 
     /**
      * Output format.
-     *
-     * @var null|string
      */
-    protected $outputFormat = null;
+    protected FormatInterface $outputFormat;
 
     /**
      * Document type
@@ -30,22 +33,18 @@ class LowrapperParameters
      * --math         create new formula.
      * --global       create new global document.
      * --web          create new HTML document.
-     *
-     * @var null|string
      */
-    protected $documentType = null;
+    protected ?DocumentTypeEnum $documentType = null;
 
     /**
      * Full path to input file. In case when input is stdin - null.
-     * @var null|string
      */
-    protected $inputFile = null;
+    protected ?string $inputFile = null;
 
     /**
      * Input data, eg. HTML as string
-     * @var mixed
      */
-    protected $inputData = null;
+    protected mixed $inputData = null;
 
     /**
      * Output filters, eg.
@@ -53,20 +52,19 @@ class LowrapperParameters
      * - UTF8
      * @var string[]
      */
-    protected $outputFilters = [];
+    protected array $outputFilters = [];
 
     /**
      * Input filters, eg.
      * - Text (encoded)
      * - UTF8
-     * @var ?string
      */
-    protected $inputFilter = null;
+    protected ?string $inputFilter = null;
 
     public function __construct(
-        /*string*/ $outputFormat = null,
-        /*string*/ $outputFile = null,
-        /*string*/ $inputFile = null
+        FormatInterface $outputFormat,
+        ?string $outputFile = null,
+        ?string $inputFile = null,
     ) {
         $this->setOutputFormat($outputFormat);
         $this->setOutputFile($outputFile);
@@ -74,90 +72,68 @@ class LowrapperParameters
     }
 
     /**
-     * @return null|string
+     * @psalm-mutation-free
      */
-    public function getInputFile()
+    public function getInputFile(): ?string
     {
         return $this->inputFile;
     }
 
-    /**
-     * @param null|string $inputFile
-     * @return LowrapperParameters
-     */
-    public function setInputFile($inputFile)
+    public function setInputFile(?string $inputFile): self
     {
         $this->inputFile = $inputFile;
         return $this;
     }
 
     /**
-     * @return null|string
+     * @psalm-mutation-free
      */
-    public function getOutputFile()
+    public function getOutputFile(): ?string
     {
         return $this->outputFile;
     }
 
-    /**
-     * @param null|string $outputFile
-     * @return LowrapperParameters
-     */
-    public function setOutputFile($outputFile)
+    public function setOutputFile(?string $outputFile): self
     {
         $this->outputFile = $outputFile;
         return $this;
     }
 
     /**
-     * @return null|string
+     * @psalm-mutation-free
      */
-    public function getOutputFormat()
+    public function getOutputFormat(): FormatInterface
     {
         return $this->outputFormat;
     }
 
     /**
-     * @param null|string $outputFormat
-     * @return LowrapperParameters
      * @throws LowrapperException
      */
-    public function setOutputFormat($outputFormat)
+    public function setOutputFormat(FormatInterface $outputFormat): self
     {
-        if ($outputFormat && !in_array($outputFormat, Format::getAvailableValues())) {
-            throw new LowrapperException('Unknown output format: ' . $outputFormat);
-        }
         $this->outputFormat = $outputFormat;
         return $this;
     }
 
     /**
-     * @return null|string
+     * @psalm-mutation-free
      */
-    public function getDocumentType()
+    public function getDocumentType(): ?DocumentTypeEnum
     {
         return $this->documentType;
     }
 
     /**
-     * @param null|string $documentType
-     * @return LowrapperParameters
      * @throws LowrapperException
      */
-    public function setDocumentType($documentType)
+    public function setDocumentType(DocumentTypeEnum $documentType): self
     {
-        if ($documentType && !in_array($documentType, DocumentType::getAvailableValues())) {
-            throw new LowrapperException('Unknown document type: ' . $documentType);
-        }
         $this->documentType = $documentType;
         return $this;
     }
 
-    /**
-     * @param string $outputFilter
-     * @return LowrapperParameters
-     */
-    public function addOutputFilter(/*string*/ $outputFilter)
+    public function addOutputFilter(string $outputFilter): self
     {
         $this->outputFilters[] = $outputFilter;
         return $this;
@@ -165,48 +141,38 @@ class LowrapperParameters
 
     /**
      * @return string[]
+     * @psalm-mutation-free
      */
-    public function getOutputFilters()//: array
+    public function getOutputFilters(): array
     {
         return $this->outputFilters;
     }
 
-    /**
-     * @param string $outputFilter
-     * @return LowrapperParameters
-     */
-    public function setInputFilter(/*string*/ $inputFilter)
+    public function setInputFilter(string $inputFilter): self
     {
         $this->inputFilter = $inputFilter;
         return $this;
     }
 
     /**
-     * @return ?string
+     * @psalm-mutation-free
      */
-    public function getInputFilter()//: ?string
+    public function getInputFilter(): ?string
     {
         return $this->inputFilter;
     }
 
     /**
-     * @return mixed
+     * @psalm-mutation-free
      */
-    public function getInputData()
+    public function getInputData(): mixed
     {
         return $this->inputData;
     }
 
-    /**
-     * @param mixed $inputData
-     * @return LowrapperParameters
-     */
-    public function setInputData($inputData)
+    public function setInputData(mixed $inputData): self
     {
         $this->inputData = $inputData;
         return $this;
     }
-
-
-
 }

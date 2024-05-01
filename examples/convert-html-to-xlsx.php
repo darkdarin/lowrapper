@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require __DIR__ . '/../vendor/autoload.php';
 
 ini_set('display_errors', 1);
@@ -11,19 +13,18 @@ require __DIR__ . '/Logger.php';
 
 // Example start
 
-use Mnvx\Lowrapper\Converter;
-use Mnvx\Lowrapper\LowrapperParameters;
-use Mnvx\Lowrapper\Format;
+use DarkDarin\Lowrapper\Converter;
+use DarkDarin\Lowrapper\Format\SpreadsheetFormatEnum;
+use DarkDarin\Lowrapper\LowrapperParameters;
 
 $source = file_get_contents(__DIR__ . '/data/html.html');
 
 $converter = new Converter();
 $converter->setLogger(new Logger());
 
-$parameters = (new LowrapperParameters())
+$parameters = (new LowrapperParameters(SpreadsheetFormatEnum::XLSX))
     ->setInputData($source)
-    ->setOutputFile(__DIR__ . '/output/html-to-xlsx.xlsx')
-    ->setOutputFormat(Format::SPREADSHEET_XLSX);
+    ->setOutputFile(__DIR__ . '/output/html-to-xlsx.xlsx');
 
 $converter->convert($parameters);
 

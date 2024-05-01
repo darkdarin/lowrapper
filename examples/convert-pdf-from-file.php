@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require __DIR__ . '/../vendor/autoload.php';
 
 ini_set('display_errors', 1);
@@ -11,18 +13,17 @@ require __DIR__ . '/Logger.php';
 
 // Example start
 
-use Mnvx\Lowrapper\Converter;
-use Mnvx\Lowrapper\LowrapperParameters;
-use Mnvx\Lowrapper\Format;
+use DarkDarin\Lowrapper\Converter;
+use DarkDarin\Lowrapper\Format\GraphicsFormatEnum;
+use DarkDarin\Lowrapper\LowrapperParameters;
 
 $outputFile = __DIR__ . '/output/pdf-to-png.png';
 
 $converter = new Converter();
 $converter->setLogger(new Logger());
 
-$parameters = (new LowrapperParameters())
+$parameters = (new LowrapperParameters(GraphicsFormatEnum::PNG))
     ->setInputFile(__DIR__ . '/data/pdf.pdf')
-    ->setOutputFormat(Format::GRAPHICS_PNG)
     ->setOutputFile($outputFile);
 
 $converter->convert($parameters);

@@ -1,10 +1,7 @@
 <?php
 
-namespace Mnvx\Lowrapper;
+declare(strict_types=1);
 
-use Exception;
+namespace DarkDarin\Lowrapper;
 
-class LowrapperException extends Exception
-{
-
-}
+class LowrapperException extends \RuntimeException {}

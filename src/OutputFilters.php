@@ -1,30 +1,33 @@
 <?php
 
-namespace Mnvx\Lowrapper;
+declare(strict_types=1);
+
+namespace DarkDarin\Lowrapper;
+
+use DarkDarin\Lowrapper\Format\FormatInterface;
+use DarkDarin\Lowrapper\Format\TextFormatEnum;
 
 class OutputFilters
 {
     /**
      * More filters: https://wiki.openoffice.org/wiki/Framework/Article/Filter/FilterList_OOo_3_0
      */
-    const TEXT_ENCODED = 'Text (encoded)';
-    const UTF8 = 'UTF8';
+    public const TEXT_ENCODED = 'Text (encoded)';
+    public const UTF8 = 'UTF8';
 
     /**
      * Default filters for output formats
-     * @param string $outputFormat
-     * @return array
+     * @param FormatInterface|null $outputFormat
+     * @return array<string>
      */
-    public static function getDefault(/*string*/ $outputFormat)
+    public static function getDefault(?FormatInterface $outputFormat): array
     {
-        switch ($outputFormat) {
-            case Format::TEXT_TEXT:
-                return [
-                    static::TEXT_ENCODED,
-                    static::UTF8,
-                ];
-        }
-
-        return [];
+        return match ($outputFormat) {
+            TextFormatEnum::TEXT => [
+                static::TEXT_ENCODED,
+                static::UTF8,
+            ],
+            default => [],
+        };
     }
 }

@@ -1,53 +1,52 @@
 <?php
 
-namespace Mnvx\Lowrapper;
+declare(strict_types=1);
 
-use Psr\Log\LoggerInterface;
+namespace DarkDarin\Lowrapper;
+
 use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Process\Process;
 
+/**
+ * @api
+ */
 class Converter implements ConverterInterface
 {
     use LoggerAwareTrait;
 
-    const BINARY_DEFAULT = 'libreoffice';
+    public const BINARY_DEFAULT = 'libreoffice';
 
     /**
      * Path to binary
-     * @var string
      */
-    protected $binaryPath;
+    protected string $binaryPath;
 
     /**
      * Temporary path (by defaults is equal to sys_get_temp_dir())
-     * @var string
      */
-    protected $tempDir;
+    protected string $tempDir;
 
     /**
      * Timeout
-     * @var int
      */
-    protected $timeout;
+    protected int|null $timeout;
 
     /**
      * Prefix for temporary file names
-     * @var string
      */
-    protected $tempPrefix;
+    protected string $tempPrefix;
 
     /**
      * The environment variables or null to use the same environment as the current PHP process
-     * @var array|null
      */
-    protected $env;
+    protected ?array $env;
 
     /**
-     * Defailt options for libreoffice
-     * @var array
+     * Default options for libreoffice
      */
-    protected $defaultOptions = [
+    protected array $defaultOptions = [
         '--headless',
         '--invisible',
         '--nocrashreport',
@@ -57,23 +56,13 @@ class Converter implements ConverterInterface
         '--norestore',
     ];
 
-    /**
-     * Converter constructor.
-     *
-     * @param string $binaryPath
-     * @param string $tempDir
-     * @param int $timeout
-     * @param LoggerInterface|null $logger
-     * @param string $tempPrefix
-     * @param array $env
-     */
     public function __construct(
-        /*string*/ $binaryPath = self::BINARY_DEFAULT,
-        /*string*/ $tempDir = null,
-        /*int*/ $timeout = null,
+        string          $binaryPath = self::BINARY_DEFAULT,
+        ?string         $tempDir = null,
+        ?int            $timeout = null,
         LoggerInterface $logger = null,
-        /*string*/ $tempPrefix = 'lowrapper_',
-        /*array*/ $env = null
+        string          $tempPrefix = 'lowrapper_',
+        ?array          $env = null,
     ) {
         if (!$logger) {
             $logger = new NullLogger();
@@ -81,8 +70,8 @@ class Converter implements ConverterInterface
         $this->setLogger($logger);
         $this->binaryPath = $binaryPath;
 
-        $this->tempDir = $tempDir ?: sys_get_temp_dir();
-        if (substr($this->tempDir, -1, 1) === '/') {
+        $this->tempDir = $tempDir !== null ? $tempDir : sys_get_temp_dir();
+        if (str_ends_with($this->tempDir, '/')) {
             $this->tempDir = substr($this->tempDir, 0, -1);
         }
 
@@ -93,18 +82,11 @@ class Converter implements ConverterInterface
 
     /**
      * @inheritdoc
+     * @psalm-suppress MissingClosureParamType
      */
-    public function convert(LowrapperParameters $parameters)
+    public function convert(LowrapperParameters $parameters): ?string
     {
-        $documentType = $parameters->getDocumentType();
-        if ($documentType && !in_array($documentType, DocumentType::getAvailableValues(), true)) {
-            throw new LowrapperException('Unknown document type: ' . $documentType);
-        }
-        $documentType = $documentType ?: DocumentType::getDefault($parameters->getOutputFormat());
-
-        if ($parameters->getOutputFormat() && !in_array($parameters->getOutputFormat(), Format::getAvailableValues(), true)) {
-            throw new LowrapperException('Unknown output format: ' . $parameters->getOutputFormat());
-        }
+        $documentType = $parameters->getDocumentType() ?: $parameters->getOutputFormat()->getDocumentType();
 
         $inputFile = $this->getInputFile($parameters);
         $outputFilters = implode('', array_map(function ($item) {
@@ -112,70 +94,56 @@ class Converter implements ConverterInterface
         }, $this->getOutputFilters($parameters)));
 
         $options = array_merge($this->defaultOptions, [
-            $documentType ? '--' . $documentType : '',
-            $parameters->getInputFilter() ? sprintf('--infilter=%s', $parameters->getInputFilter()) : null,
-            '--convert-to "' . $parameters->getOutputFormat() . $outputFilters . '"',
+            '--' . $documentType->value,
+            $parameters->getInputFilter() !== null ? sprintf('--infilter=%s', $parameters->getInputFilter()) : null,
+            '--convert-to "' . $parameters->getOutputFormat()->getFormat() . $outputFilters . '"',
             '"' . $inputFile . '"',
         ]);
         $command = $this->binaryPath . ' ' . implode(' ', array_filter($options));
 
         $process = $this->createProcess($command);
 
-        if ($this->timeout) {
+        if ($this->timeout !== null) {
             $process->setTimeout($this->timeout);
         }
 
-        $this->logger->info(sprintf('Start: %s', $command));
+        $this->logger?->info(sprintf('Start: %s', $command));
 
         $self = $this;
         $resultCode = $process->run(function ($type, $buffer) use ($self) {
             if (Process::ERR === $type) {
-                $self->logger->warning($buffer);
-            }
-            else {
-                $self->logger->info($buffer);
+                $self->logger?->warning($buffer);
+            } else {
+                $self->logger?->info($buffer);
             }
         });
 
-        $result = $this->createOutput($inputFile . '.' . $parameters->getOutputFormat(), $parameters->getOutputFile());
-        $this->deleteInput($parameters, $inputFile);
+        $result = $this->createOutput($inputFile . '.' . $parameters->getOutputFormat()->getFormat(), $parameters->getOutputFile());
+        $this->deleteInput($inputFile);
 
         if ($resultCode != 0) {
-            $this->logger->error(sprintf('Failed with result code %d: %s', $resultCode, $command));
+            $this->logger?->error(sprintf('Failed with result code %d: %s', $resultCode, $command));
             throw new LowrapperException('Error on converting data with LibreOffice: ' . $resultCode, $resultCode);
-        }
-        else {
-            $this->logger->info(sprintf('Finished: %s', $command));
+        } else {
+            $this->logger?->info(sprintf('Finished: %s', $command));
         }
 
         return $result;
     }
 
-    /**
-     * @param $option
-     * @return $this
-     */
-    public function addOption($option)
+    public function addOption(string $option): self
     {
         $this->defaultOptions[] = $option;
 
         return $this;
     }
 
-    /**
-     * @param $command
-     * @return Process
-     */
-    protected function createProcess(/*string*/ $command)//: Process
+    protected function createProcess(string $command): Process
     {
         return Process::fromShellCommandline($command, $this->tempDir, $this->env);
     }
 
-    /**
-     * @param string $inputFile
-     * @return string
-     */
-    protected function createTemporaryFile(/*string*/ $inputFile)//: string
+    protected function createTemporaryFile(string $inputFile): string
     {
         $temporaryFile = $this->genTemporaryFileName();
         copy($inputFile, $temporaryFile);
@@ -184,26 +152,22 @@ class Converter implements ConverterInterface
 
     /**
      * Generate unique name for temporary file
-     * @return string
      */
-    protected function genTemporaryFileName()
+    protected function genTemporaryFileName(): string
     {
         return $this->tempDir . '/' . uniqid($this->tempPrefix);
     }
 
     /**
-     * @param string $inputFile
-     * @param string $outputFile
-     * @return string|null
      * @throws LowrapperException
      */
-    protected function createOutput(/*string*/ $inputFile, /*string*/ $outputFile = null)
+    protected function createOutput(string $inputFile, ?string $outputFile = null): null|string
     {
         if (!file_exists($inputFile)) {
-            $this->logger->error('LibreOffice did not convert, check its working capacity');
+            $this->logger?->error('LibreOffice did not convert, check its working capacity');
             throw new LowrapperException('LibreOffice did not convert, check its working capacity');
         }
-        if ($outputFile) {
+        if ($outputFile !== null) {
             if (file_exists($outputFile)) {
                 unlink($outputFile);
             }
@@ -212,16 +176,19 @@ class Converter implements ConverterInterface
         }
 
         $result = file_get_contents($inputFile);
+        if ($result === false) {
+            return null;
+        }
+
         unlink($inputFile);
         return $result;
     }
 
     /**
      * Get output filters
-     * @param LowrapperParameters $parameters
      * @return string[]
      */
-    protected function getOutputFilters(LowrapperParameters $parameters)
+    protected function getOutputFilters(LowrapperParameters $parameters): array
     {
         if (empty($parameters->getOutputFilters())) {
             return OutputFilters::getDefault($parameters->getOutputFormat());
@@ -231,12 +198,10 @@ class Converter implements ConverterInterface
 
     /**
      * Get input file - return existed or create from input data
-     * @param LowrapperParameters $parameters
-     * @return string
      */
-    protected function getInputFile(LowrapperParameters $parameters)
+    protected function getInputFile(LowrapperParameters $parameters): string
     {
-        if ($parameters->getInputFile()) {
+        if ($parameters->getInputFile() !== null) {
             return $this->createTemporaryFile($parameters->getInputFile());
         }
 
@@ -247,12 +212,9 @@ class Converter implements ConverterInterface
 
     /**
      * Delete input file if it was created in process of conversion
-     * @param LowrapperParameters $parameters
-     * @param string $inputFile
      */
-    protected function deleteInput(LowrapperParameters $parameters, /*string*/ $inputFile)
+    protected function deleteInput(string $inputFile): void
     {
         unlink($inputFile);
     }
-
 }
